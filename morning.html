@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KD Morning Brief</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #08080f; color: #f0ede8; font-family: 'Inter', -apple-system, sans-serif; min-height: 100vh; }
+
+  .header { background: #0f0f1a; border-bottom: 1px solid #1a1a2e; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .header-logo { width: 32px; height: 32px; background: linear-gradient(135deg, #c9a84c, #e8c97a); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .header-title { font-size: 14px; font-weight: 700; }
+  .header-sub { font-size: 10px; color: #555; }
+  .date-chip { font-size: 11px; color: #c9a84c; background: #1a1500; padding: 4px 10px; border-radius: 12px; border: 1px solid #c9a84c33; white-space: nowrap; }
+
+  .container { padding: 20px; max-width: 480px; margin: 0 auto; }
+
+  /* LOADING */
+  .loading-screen { text-align: center; padding: 80px 20px; }
+  .loading-icon { font-size: 48px; margin-bottom: 16px; animation: pulse 1.5s infinite; }
+  .loading-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .loading-sub { font-size: 13px; color: #555; }
+  .loading-chips { display: flex; gap: 8px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
+  .loading-chip { background: #1a1a2e; border-radius: 6px; padding: 6px 12px; font-size: 11px; color: #c9a84c; }
+
+  /* TOPICS */
+  .greeting { margin-bottom: 20px; }
+  .greeting h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .greeting p { font-size: 13px; color: #555; }
+  .topic-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .topic-card { background: #0f0f1a; border: 1px solid #1a1a2e; border-radius: 12px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: border-color 0.2s; text-align: left; width: 100%; }
+  .topic-card:hover { border-color: #c9a84c44; }
+  .topic-emoji { font-size: 24px; flex-shrink: 0; }
+  .topic-headline { font-size: 13px; font-weight: 600; color: #f0ede8; margin-bottom: 3px; }
+  .topic-angle { font-size: 11px; color: #555; line-height: 1.4; }
+  .topic-arrow { margin-left: auto; color: #333; font-size: 16px; flex-shrink: 0; }
+  .custom-box { background: #0f0f1a; border: 1px dashed #2a2a3e; border-radius: 12px; padding: 16px; }
+  .custom-label { font-size: 12px; color: #555; margin-bottom: 10px; }
+  .custom-row { display: flex; gap: 8px; }
+  .custom-input { flex: 1; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 8px; padding: 10px 12px; color: #f0ede8; font-size: 13px; outline: none; }
+  .custom-input::placeholder { color: #444; }
+  .btn-go { background: linear-gradient(135deg, #c9a84c, #e8c97a); color: #0a0a0f; border: none; border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor: pointer; font-size: 13px; }
+  .btn-refresh { width: 100%; margin-top: 12px; background: transparent; border: 1px solid #1a1a2e; color: #444; border-radius: 10px; padding: 10px; font-size: 12px; cursor: pointer; }
+
+  /* GENERATING */
+  .gen-screen { text-align: center; padding: 80px 20px; }
+  .gen-icon { font-size: 48px; margin-bottom: 16px; }
+  .gen-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .gen-topic { font-size: 13px; color: #555; margin-bottom: 24px; }
+
+  /* RESULT */
+  .back-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .btn-back { background: #1a1a2e; border: none; color: #888; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px; }
+  .topic-chip { font-size: 12px; color: #c9a84c; background: #1a1500; padding: 4px 12px; border-radius: 12px; border: 1px solid #c9a84c33; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+  .view-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+  .btn-toggle { flex: 1; border: none; border-radius: 10px; padding: 10px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .btn-toggle.active { background: linear-gradient(135deg, #c9a84c, #e8c97a); color: #0a0a0f; font-weight: 700; }
+  .btn-toggle.inactive { background: #1a1a2e; color: #888; font-weight: 400; }
+
+  /* POSTCARD */
+  .postcard { border-radius: 16px; padding: 28px 24px; position: relative; overflow: hidden; aspect-ratio: 1/1; display: flex; flex-direction: column; justify-content: space-between; }
+  .postcard-glow1 { position: absolute; top: 0; right: 0; width: 200px; height: 200px; border-radius: 50%; pointer-events: none; }
+  .postcard-glow2 { position: absolute; bottom: 0; left: 0; width: 150px; height: 150px; border-radius: 50%; pointer-events: none; }
+  .postcard-top { display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1; }
+  .postcard-tag { font-size: 9px; font-weight: 800; letter-spacing: 2px; padding: 4px 10px; border-radius: 4px; }
+  .postcard-brand { text-align: right; }
+  .postcard-brand-kd { font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+  .postcard-brand-name { font-size: 8px; letter-spacing: 0.5px; }
+  .postcard-middle { position: relative; z-index: 1; }
+  .postcard-headline { font-size: 22px; font-weight: 900; line-height: 1.2; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .postcard-sub { font-size: 13px; margin-bottom: 16px; font-style: italic; }
+  .postcard-lines { display: flex; flex-direction: column; gap: 6px; }
+  .postcard-line { display: flex; align-items: flex-start; gap: 8px; }
+  .postcard-dot { width: 4px; height: 4px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+  .postcard-line-text { font-size: 12px; line-height: 1.5; }
+  .postcard-bottom { display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index: 1; }
+  .postcard-url { font-size: 10px; }
+  .postcard-handle { font-size: 9px; opacity: 0.5; margin-top: 2px; }
+  .postcard-cta { border-radius: 6px; padding: 4px 10px; }
+  .postcard-cta-text { font-size: 10px; font-weight: 700; }
+  .screenshot-hint { font-size: 11px; color: #444; text-align: center; margin-top: 8px; margin-bottom: 16px; }
+
+  /* CAROUSEL */
+  .carousel-card { border-radius: 16px; padding: 24px; aspect-ratio: 1/1; display: flex; flex-direction: column; justify-content: space-between; }
+  .carousel-top { display: flex; justify-content: space-between; align-items: center; }
+  .carousel-counter { font-size: 9px; font-weight: 800; letter-spacing: 2px; }
+  .carousel-brand { font-size: 10px; font-weight: 700; }
+  .carousel-slide-title { font-size: 20px; font-weight: 900; line-height: 1.2; margin-bottom: 12px; }
+  .carousel-slide-body { font-size: 13px; line-height: 1.7; }
+  .carousel-dots { display: flex; gap: 6px; }
+  .carousel-dot { height: 3px; border-radius: 2px; cursor: pointer; transition: all 0.3s; }
+  .carousel-nav { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-nav { flex: 1; background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 8px; padding: 8px; cursor: pointer; font-size: 13px; color: #888; }
+  .btn-nav:disabled { color: #333; cursor: not-allowed; }
+
+  /* CONTENT CARDS */
+  .content-card { background: #0f0f1a; border: 1px solid #1a1a2e; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .content-card-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .content-card-text { font-size: 13px; line-height: 1.7; white-space: pre-line; margin-bottom: 12px; }
+  .btn-copy { border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+  .wa-card { background: #0a1a0f; border: 1px solid #1a3a1a; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .info-card { background: #0f0f1a; border: 1px solid #1a1a2e; border-radius: 12px; padding: 14px; }
+  .info-label { font-size: 10px; color: #c9a84c; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .info-title { font-size: 12px; font-weight: 600; color: #f0ede8; margin-bottom: 2px; }
+  .info-artist { font-size: 11px; color: #555; margin-bottom: 4px; }
+  .info-reason { font-size: 10px; color: #666; line-height: 1.4; }
+  .btn-regen { width: 100%; background: transparent; border: 1px solid #2a2a3e; color: #555; border-radius: 10px; padding: 12px; font-size: 13px; cursor: pointer; margin-bottom: 20px; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .pulse { animation: pulse 1.5s infinite; }
+  .pulse2 { animation: pulse 1.5s 0.2s infinite; }
+  .pulse3 { animation: pulse 1.5s 0.4s infinite; }
+  .pulse4 { animation: pulse 1.5s 0.6s infinite; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="header-logo">☀️</div>
+    <div>
+      <div class="header-title">KD Morning Brief</div>
+      <div class="header-sub">Daily Content Generator</div>
+    </div>
+  </div>
+  <div class="date-chip" id="dateChip" style="display:none"></div>
+</div>
+
+<div class="container">
+  <!-- LOADING -->
+  <div id="screenLoading" class="loading-screen">
+    <div class="loading-icon pulse">📡</div>
+    <div class="loading-title">Scanning today's news...</div>
+    <div class="loading-sub">Searching real estate & finance updates</div>
+    <div class="loading-chips">
+      <span class="loading-chip pulse">Real Estate</span>
+      <span class="loading-chip pulse2">Home Loans</span>
+      <span class="loading-chip pulse3">Gurugram</span>
+      <span class="loading-chip pulse4">ROF Projects</span>
+    </div>
+  </div>
+
+  <!-- TOPICS -->
+  <div id="screenTopics" style="display:none">
+    <div class="greeting">
+      <h2>Good morning, KD 👋</h2>
+      <p>Pick a topic to create today's post</p>
+    </div>
+    <div class="topic-list" id="topicList"></div>
+    <div class="custom-box">
+      <div class="custom-label">Or type your own topic</div>
+      <div class="custom-row">
+        <input class="custom-input" id="customInput" placeholder="e.g. ROF High Rise launch...">
+        <button class="btn-go" onclick="handleCustom()">Go</button>
+      </div>
+    </div>
+    <button class="btn-refresh" onclick="fetchTopics()">🔄 Refresh topics</button>
+  </div>
+
+  <!-- GENERATING -->
+  <div id="screenGenerating" style="display:none" class="gen-screen">
+    <div class="gen-icon">✨</div>
+    <div class="gen-title">Creating your content...</div>
+    <div class="gen-topic" id="genTopicLabel"></div>
+    <div class="loading-chips">
+      <span class="loading-chip pulse">Postcard</span>
+      <span class="loading-chip pulse2">Carousel</span>
+      <span class="loading-chip pulse3">Caption</span>
+      <span class="loading-chip pulse4">Music</span>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="screenResult" style="display:none">
+    <div class="back-row">
+      <button class="btn-back" onclick="showTopics()">← Back</button>
+      <div class="topic-chip" id="resultTopicChip"></div>
+    </div>
+    <div class="view-toggle">
+      <button class="btn-toggle active" id="btnPostcard" onclick="setView('postcard')">🖼️ Single Post</button>
+      <button class="btn-toggle inactive" id="btnCarousel" onclick="setView('carousel')">📋 Carousel</button>
+    </div>
+
+    <!-- Postcard -->
+    <div id="postcardView">
+      <div class="postcard" id="postcardEl"></div>
+      <div class="screenshot-hint">📸 Screenshot the card above to post</div>
+    </div>
+
+    <!-- Carousel -->
+    <div id="carouselView" style="display:none">
+      <div class="carousel-card" id="carouselEl"></div>
+      <div class="carousel-nav">
+        <button class="btn-nav" id="btnPrev" onclick="carouselNav(-1)">← Prev</button>
+        <button class="btn-nav" id="btnNext" onclick="carouselNav(1)">Next →</button>
+      </div>
+      <div class="screenshot-hint">📸 Screenshot each slide to post as carousel</div>
+    </div>
+
+    <!-- Caption -->
+    <div class="content-card">
+      <div class="content-card-label" style="color:#a078e8">📱 Instagram Caption</div>
+      <div class="content-card-text" id="captionText" style="color:#e0e0f0"></div>
+      <button class="btn-copy" id="btnCopyCaption" onclick="copyText('caption')" style="background:#1a1a2e;color:#a078e8">Copy Caption</button>
+    </div>
+
+    <!-- WhatsApp -->
+    <div class="wa-card">
+      <div class="content-card-label" style="color:#4adf80">💬 WhatsApp Status</div>
+      <div class="content-card-text" id="waText" style="color:#f0ede8"></div>
+      <button class="btn-copy" id="btnCopyWa" onclick="copyText('wa')" style="background:#0f2a0f;color:#4adf80">Copy Status</button>
+    </div>
+
+    <!-- Music + Time -->
+    <div class="grid-2">
+      <div class="info-card">
+        <div class="info-label">🎵 Music</div>
+        <div class="info-title" id="musicSong"></div>
+        <div class="info-artist" id="musicArtist"></div>
+        <div class="info-reason" id="musicReason"></div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">⏰ Post At</div>
+        <div class="info-title" id="bestTime" style="font-size:13px;font-weight:700"></div>
+      </div>
+    </div>
+
+    <button class="btn-regen" onclick="regenerate()">🔄 Generate Different Version</button>
+  </div>
+</div>
+
+<script>
+const NEWS_SYSTEM = `You are a real estate content researcher for KD Constructions, Gurugram.
+
+Search today's news and return 6 hot topics relevant to:
+- Real estate in Gurugram/Haryana/India
+- Home loans, RBI rates, finance
+- Affordable housing policies
+- Luxury real estate trends
+- Infrastructure updates (metro, highways, Sohna road)
+- ROF projects or South Gurugram development
+
+Respond ONLY in this exact JSON, no markdown, no preamble:
+{
+  "topics": [
+    { "id": 1, "emoji": "🏦", "headline": "short punchy headline", "angle": "why this matters for buyers in Gurugram" },
+    { "id": 2, "emoji": "🏗️", "headline": "...", "angle": "..." },
+    { "id": 3, "emoji": "📈", "headline": "...", "angle": "..." },
+    { "id": 4, "emoji": "🏠", "headline": "...", "angle": "..." },
+    { "id": 5, "emoji": "💰", "headline": "...", "angle": "..." },
+    { "id": 6, "emoji": "🗺️", "headline": "...", "angle": "..." }
+  ],
+  "date": "today's date readable format"
+}`;
+
+const CONTENT_SYSTEM = `You are a content creator for KD Constructions, a premium real estate consultancy in Gurugram run by KD Taneja (24 years experience since 2002).
+
+Active projects:
+- ROF Antares (affordable housing, Sector 7 Sohna, HARERA 29/2026)
+- ROF High Rise (3 & 4 BHK luxury, Sector 36 South Gurugram, Aravalli Views, ~150 units only)
+- Sushant Lok-1 (3.5Cr+)
+
+Style: Educational, trustworthy, direct. Not salesy. Fraud-awareness builds credibility.
+Audience: Gurugram/Haryana homebuyers, investors
+
+Respond ONLY in this exact JSON, no markdown, no preamble:
+{
+  "postcard": {
+    "headline": "bold 4-6 word headline",
+    "subheadline": "one supporting line",
+    "body_lines": ["stat or fact", "insight", "cta hook"],
+    "tag": "2-3 word category tag e.g. MARKET UPDATE",
+    "theme": "gold"
+  },
+  "carousel_slides": [
+    { "title": "slide 1 title", "body": "slide 1 content 2-3 lines" },
+    { "title": "slide 2 title", "body": "slide 2 content 2-3 lines" },
+    { "title": "slide 3 title", "body": "slide 3 content 2-3 lines" },
+    { "title": "slide 4 title", "body": "slide 4 content 2-3 lines" }
+  ],
+  "caption": "full instagram caption with emojis, hashtags, CTA keyword",
+  "whatsapp_status": "short 2-3 line punchy status",
+  "cta_keyword": "one word comment trigger e.g. HIGH",
+  "music": { "song": "song name", "artist": "artist name", "reason": "why it fits in 1 line" },
+  "best_time": "time and 1-line reason"
+}`;
+
+const themes = {
+  gold: { bg: "#0f0c02", card: "#1a1500", accent: "#c9a84c", accent2: "#e8c97a", text: "#f5f0e0", sub: "#a89060" },
+  blue: { bg: "#020814", card: "#05121f", accent: "#2196f3", accent2: "#64b5f6", text: "#e8f4fd", sub: "#7ab3d4" },
+  green: { bg: "#02100a", card: "#051a0f", accent: "#00c853", accent2: "#69f0ae", text: "#e8fdf0", sub: "#7abf9a" },
+  red: { bg: "#100202", card: "#1f0505", accent: "#e53935", accent2: "#ff6b6b", text: "#fde8e8", sub: "#c47a7a" },
+};
+
+let currentContent = null;
+let currentTopic = null;
+let carouselIndex = 0;
+
+function show(id) {
+  ['screenLoading','screenTopics','screenGenerating','screenResult'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+  });
+}
+
+function setDate(d) {
+  const chip = document.getElementById('dateChip');
+  chip.textContent = d;
+  chip.style.display = 'block';
+}
+
+async function fetchTopics() {
+  show('screenLoading');
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        system: NEWS_SYSTEM,
+        tools: [{ type: "web_search_20250305", name: "web_search" }],
+        messages: [{ role: "user", content: "Search today's top real estate and finance news for Gurugram India and give me 6 hot content topics for June 2026." }]
+      })
+    });
+    const data = await res.json();
+    const textBlock = data.content?.find(b => b.type === "text");
+    const raw = textBlock?.text || "";
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+    renderTopics(parsed.topics);
+    setDate(parsed.date);
+  } catch(e) {
+    const fallback = [
+      { id:1, emoji:"🏦", headline:"RBI holds repo rate steady at 6%", angle:"Home loan EMIs unchanged — good window to lock in rates now" },
+      { id:2, emoji:"🏗️", headline:"Gurugram metro Phase 4 gets green light", angle:"New stations to boost property values in South Gurugram corridors" },
+      { id:3, emoji:"📈", headline:"Luxury housing demand up 40% in NCR", angle:"3-4 BHK segment leading growth — perfect angle for ROF High Rise" },
+      { id:4, emoji:"🏠", headline:"PMAY affordable housing deadline extended", angle:"More time for eligible buyers to apply — Antares buyers must know" },
+      { id:5, emoji:"💰", headline:"Stamp duty rationalised in Haryana", angle:"What homebuyers in Gurugram save on registration now" },
+      { id:6, emoji:"🗺️", headline:"Sohna highway widening fast-tracked", angle:"Connectivity boost directly impacts Sector 7 & 36 projects" }
+    ];
+    renderTopics(fallback);
+    const today = new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    setDate(today);
+  }
+}
+
+function renderTopics(topics) {
+  const list = document.getElementById('topicList');
+  list.innerHTML = '';
+  topics.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'topic-card';
+    btn.innerHTML = `
+      <span class="topic-emoji">${t.emoji}</span>
+      <div style="flex:1">
+        <div class="topic-headline">${t.headline}</div>
+        <div class="topic-angle">${t.angle}</div>
+      </div>
+      <span class="topic-arrow">→</span>
+    `;
+    btn.onclick = () => generateContent(t);
+    list.appendChild(btn);
+  });
+  show('screenTopics');
+}
+
+function handleCustom() {
+  const val = document.getElementById('customInput').value.trim();
+  if (!val) return;
+  generateContent({ headline: val, angle: val, emoji: '✍️' });
+}
+
+document.getElementById('customInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleCustom();
+});
+
+async function generateContent(topic) {
+  currentTopic = topic;
+  document.getElementById('genTopicLabel').textContent = topic.headline;
+  show('screenGenerating');
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500,
+        system: CONTENT_SYSTEM,
+        messages: [{ role: "user", content: `Create full content pack for:\nHeadline: ${topic.headline}\nAngle: ${topic.angle}\n\nMake it specific to Gurugram real estate buyers. Educational and trustworthy tone. Theme should be gold.` }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content?.find(b => b.type === "text")?.text || "";
+    const clean = raw.replace(/```json|```/g, "").trim();
+    currentContent = JSON.parse(clean);
+    renderResult();
+  } catch(e) {
+    alert("Error generating content. Please try again.");
+    show('screenTopics');
+  }
+}
+
+function renderResult() {
+  const c = currentContent;
+  const t = themes[c.postcard?.theme] || themes.gold;
+
+  // Topic chip
+  document.getElementById('resultTopicChip').textContent = `${currentTopic.emoji} ${currentTopic.headline}`;
+
+  // Postcard
+  renderPostcard(c, t);
+
+  // Carousel
+  carouselIndex = 0;
+  renderCarouselSlide();
+
+  // Caption
+  document.getElementById('captionText').textContent = c.caption;
+  document.getElementById('waText').textContent = c.whatsapp_status;
+
+  // Music
+  document.getElementById('musicSong').textContent = c.music?.song || '';
+  document.getElementById('musicArtist').textContent = c.music?.artist || '';
+  document.getElementById('musicReason').textContent = c.music?.reason || '';
+  document.getElementById('bestTime').textContent = c.best_time || '';
+
+  setView('postcard');
+  show('screenResult');
+}
+
+function renderPostcard(c, t) {
+  const p = c.postcard;
+  const el = document.getElementById('postcardEl');
+  el.style.cssText = `background: linear-gradient(135deg, ${t.bg} 0%, ${t.card} 100%); border: 1px solid ${t.accent}33; border-radius: 16px; padding: 28px 24px; position: relative; overflow: hidden; aspect-ratio: 1/1; display: flex; flex-direction: column; justify-content: space-between;`;
+
+  el.innerHTML = `
+    <div style="position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle, ${t.accent}15 0%, transparent 70%);pointer-events:none"></div>
+    <div style="position:absolute;bottom:0;left:0;width:150px;height:150px;background:radial-gradient(circle, ${t.accent2}10 0%, transparent 70%);pointer-events:none"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1">
+      <div style="background:${t.accent};color:${t.bg};font-size:9px;font-weight:800;letter-spacing:2px;padding:4px 10px;border-radius:4px">${p.tag}</div>
+      <div style="text-align:right">
+        <div style="font-size:11px;font-weight:700;color:${t.accent};letter-spacing:1px">KD</div>
+        <div style="font-size:8px;color:${t.sub};letter-spacing:0.5px">CONSTRUCTIONS</div>
+      </div>
+    </div>
+    <div style="position:relative;z-index:1">
+      <div style="font-size:22px;font-weight:900;color:${t.text};line-height:1.2;margin-bottom:8px;letter-spacing:-0.5px">${p.headline}</div>
+      <div style="font-size:13px;color:${t.accent2};margin-bottom:16px;font-style:italic">${p.subheadline}</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${p.body_lines.map(line => `
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <div style="width:4px;height:4px;border-radius:50%;background:${t.accent};margin-top:6px;flex-shrink:0"></div>
+            <div style="font-size:12px;color:${t.sub};line-height:1.5">${line}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;position:relative;z-index:1">
+      <div>
+        <div style="font-size:10px;color:${t.sub}">kdcinfra.in</div>
+        <div style="font-size:9px;color:${t.sub}80">@k.d.constructions</div>
+      </div>
+      <div style="background:${t.accent}20;border:1px solid ${t.accent}40;border-radius:6px;padding:4px 10px">
+        <div style="font-size:10px;color:${t.accent};font-weight:700">Comment ${c.cta_keyword}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCarouselSlide() {
+  const c = currentContent;
+  const t = themes[c.postcard?.theme] || themes.gold;
+  const slides = c.carousel_slides;
+  const slide = slides[carouselIndex];
+  const el = document.getElementById('carouselEl');
+
+  el.style.cssText = `background: linear-gradient(135deg, ${t.bg}, ${t.card}); border: 1px solid ${t.accent}33; border-radius: 16px; padding: 24px; aspect-ratio: 1/1; display: flex; flex-direction: column; justify-content: space-between;`;
+
+  const dotsHtml = slides.map((_, i) => `
+    <div onclick="jumpCarousel(${i})" style="height:3px;flex:${i === carouselIndex ? 2 : 1};background:${i === carouselIndex ? t.accent : t.accent+'30'};border-radius:2px;cursor:pointer;transition:all 0.3s"></div>
+  `).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:9px;color:${t.accent};font-weight:800;letter-spacing:2px">SLIDE ${carouselIndex + 1}/${slides.length}</div>
+      <div style="font-size:10px;font-weight:700;color:${t.accent}">KD CONSTRUCTIONS</div>
+    </div>
+    <div>
+      <div style="font-size:20px;font-weight:900;color:${t.text};margin-bottom:12px;line-height:1.2">${slide.title}</div>
+      <div style="font-size:13px;color:${t.sub};line-height:1.7">${slide.body}</div>
+    </div>
+    <div style="display:flex;gap:6px">${dotsHtml}</div>
+  `;
+
+  document.getElementById('btnPrev').disabled = carouselIndex === 0;
+  document.getElementById('btnNext').disabled = carouselIndex === slides.length - 1;
+}
+
+function carouselNav(dir) {
+  const slides = currentContent.carousel_slides;
+  carouselIndex = Math.max(0, Math.min(slides.length - 1, carouselIndex + dir));
+  renderCarouselSlide();
+}
+
+function jumpCarousel(i) {
+  carouselIndex = i;
+  renderCarouselSlide();
+}
+
+function setView(v) {
+  document.getElementById('postcardView').style.display = v === 'postcard' ? 'block' : 'none';
+  document.getElementById('carouselView').style.display = v === 'carousel' ? 'block' : 'none';
+  document.getElementById('btnPostcard').className = `btn-toggle ${v === 'postcard' ? 'active' : 'inactive'}`;
+  document.getElementById('btnCarousel').className = `btn-toggle ${v === 'carousel' ? 'active' : 'inactive'}`;
+}
+
+function copyText(type) {
+  const text = type === 'caption' ? currentContent.caption : currentContent.whatsapp_status;
+  const btnId = type === 'caption' ? 'btnCopyCaption' : 'btnCopyWa';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    const original = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.style.background = '#1a3a1a';
+    btn.style.color = '#88ff88';
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.style.background = type === 'caption' ? '#1a1a2e' : '#0f2a0f';
+      btn.style.color = type === 'caption' ? '#a078e8' : '#4adf80';
+    }, 2000);
+  });
+}
+
+function showTopics() { show('screenTopics'); }
+
+function regenerate() { generateContent(currentTopic); }
+
+// Start
+fetchTopics();
+</script>
+</body>
+</html>
